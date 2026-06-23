@@ -1,0 +1,82 @@
+# This script runs a reversible scaling thermodynamic integration.
+# Based on the example from https://github.com/freitas-rodrigo/FreeEnergyLAMMPS
+
+variable Pbar equal 9869*${P}
+
+units           real
+atom_style      atomic
+boundary        p p p
+
+#--------------------------- Simulation variables -----------------------------#
+  # Initalizes the random number generator.
+  variable         rnd equal round(random(0,999,${RANDOM}))
+
+  # Simulation control parameters.
+  variable         t_eq equal 1000 # Equilibration time.
+  variable         t equal 10000 # Switching time.
+#------------------------------------------------------------------------------#
+
+
+#---------------------------- Atomic setup ------------------------------------#
+  read_data       ${prepared}
+
+  mass            1 47.87 # Titanium
+
+  comm_modify     mode single cutoff 17.0
+  pair_style          chemtrain_deploy cuda12 0.95
+  pair_coeff          * * ../models/${model}/model.ptb 1.1 1.1
+
+  neigh_modify     delay 0
+  timestep         4.0
+
+  write_data ${folderpath}/prepared_P_${P}_T_${T}.lmpdat
+#------------------------------------------------------------------------------#
+
+
+#----------------------------- Run simulation ---------------------------------#
+  # Setup thermo output.
+  thermo_style     custom step pe
+  thermo           0
+
+  variable xcm equal xcm(all,x)
+  variable ycm equal xcm(all,y)
+  variable zcm equal xcm(all,z)
+
+  # Integrator, barostat, and thermostat.
+  fix              f1 all npt temp ${T} ${T} $(100.*dt) tchain 3 &
+                   x ${Pbar} ${Pbar} $(1000.*dt) &
+                   y ${Pbar} ${Pbar} $(1000.*dt) &
+                   z ${Pbar} ${Pbar} $(1000.*dt) &
+                   fixedpoint ${xcm} ${ycm} ${zcm} &
+                   couple ${couple} pchain 2
+
+  # Initial temperature to accelerate equilibration.
+  velocity         all create ${T} ${rnd} dist gaussian
+  velocity         all zero linear
+
+  thermo           10
+  thermo_style     custom step temp press vol pe etotal
+  fix              f4 all print 10 "$(temp) $(press) $(vol)" screen no &
+                   file ${folderpath}/thermo_T_${T}.csv title "# T P V"
+
+  # Forward integration.
+  run              ${t_eq}
+  dump             1 all atom 100 ${folderpath}/forward_T_${T}.lammpstrj
+  variable         lambda equal 1/(1+(elapsed/${t})*(${Ts}/$T-1))
+  fix              f2 all adapt 1 pair chemtrain_deploy scale * * v_lambda
+  fix              f3 all print 1 "$(pe/atoms) ${lambda}" screen no &
+                   file ${folderpath}/forward_T_${T}.csv title "# pe lambda"
+  run              ${t}
+  unfix            f2
+  unfix            f3
+  undump           1
+
+  # Backward integration.
+  run              ${t_eq}
+  dump             1 all atom 100 ${folderpath}/backward_T_${T}.lammpstrj
+  variable         lambda equal 1/(1+(1-(elapsed/${t}))*(${Ts}/$T-1))
+  fix              f2 all adapt 1 pair chemtrain_deploy scale * * v_lambda
+  fix              f3 all print 1 "$(pe/atoms) ${lambda}" screen no &
+                   file ${folderpath}/backward_T_${T}.csv title "# pe lambda"
+  run              ${t}
+#------------------------------------------------------------------------------#

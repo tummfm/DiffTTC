@@ -1,0 +1,15 @@
+
+units real                     # Angstroms, picoseconds, eV, Kelvin, bars
+dimension 3
+boundary p p p
+atom_style atomic
+
+
+lattice bcc ${a}
+region box block 0 6 0 6 0 8
+create_box 1 box
+create_atoms 1 box
+
+mass            1 47.94794068 # Ti
+
+write_data ${folderpath}/bcc_T_${T}_P_${P}_a_${a}.lmpdat

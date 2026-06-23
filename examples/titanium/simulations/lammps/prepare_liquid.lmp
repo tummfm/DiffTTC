@@ -1,0 +1,87 @@
+# LAMMPS input script for solidification of nano-polycrystalline aluminum with separate dump files and temperature logging
+
+# Set variables
+variable dt equal 4 # time step size in fs
+variable Neq equal 2000 # number of equilibration steps
+variable Nprod equal 10000 # number of production steps
+variable Teq equal ${EstTemp} # equilibration temperature
+variable dT equal 1000 # temperature difference for superheating
+variable pressBar equal ${DefPress}        # pressure in bar
+variable Peq equal $(v_pressBar * 9869) # pressure from bar to atmospheres
+variable Nrep equal 16 # number of unit cell repetitions in each direction
+
+print "Running simulation with the following parameters:"
+print "Temperature: ${Teq} K"
+print "Pressure: ${pressBar} bar ()"
+print "Model: ${model}"
+
+units           real
+atom_style      atomic
+boundary        p p p
+
+lattice         bcc 3.25 # Titanium
+region          box block 0 ${Nrep} 0 ${Nrep} 0 ${Nrep}
+create_box      1 box
+create_atoms    1 box
+
+mass            1 47.87 # Titanium
+
+write_data ${folderpath}/liquid_prepared_P_${DefPress}_T_${Teq}.lmpdat
+
+comm_modify     mode single cutoff 17.0
+pair_style          chemtrain_deploy cuda12 0.95
+pair_coeff          * * ../models/${model}/model.ptb 1.1 1.25
+
+# Set neighbor communication
+neighbor            2.0 bin
+neigh_modify    delay 0 every 1 check yes
+
+thermo              100
+thermo_style        custom step temp pe etotal press vol
+thermo_modify       flush yes
+
+timestep            ${dt}
+
+compute         1 all msd com yes
+
+variable        msd equal c_1[4]
+variable        temp equal temp
+variable        press equal press
+variable        vol equal vol
+variable        pe equal pe
+variable        a equal "lx/v_Nrep"
+
+variable xcm equal xcm(all,x)
+variable ycm equal xcm(all,y)
+variable zcm equal xcm(all,z)
+
+# Create liquid structure by superheating and cooling
+fix             fd all print 10 "${temp},${press},${vol},${pe},${a},${msd}" &
+                title "T, P, V, a, MSD" &
+                file ${folderpath}/liquid_eq_P_${DefPress}_T_${Teq}.csv screen no
+
+velocity        all create $(v_Teq + v_dT) 23456789
+velocity        all zero linear
+fix             f1 all nph iso ${Peq} ${Peq} $(1000.*dt) pchain 2 &
+                fixedpoint ${xcm} ${ycm} ${zcm}
+
+fix             f2 all langevin $(v_Teq + v_dT) ${Teq} 100. 23456789 zero yes
+
+dump            all_sim all atom 100 ${folderpath}/dump_prepare_liquid_P_${DefPress}_T_${Teq}.lammpstrj  # Saves the entire simulation
+run             ${Neq}
+
+fix             f2 all langevin ${Teq} ${Teq} 100. 23456789 zero yes
+run             ${Neq}
+
+# Production run
+undump          all_sim
+reset_timestep  0
+fix             fd all print 10 "${temp},${press},${vol},${pe},${a},${msd}" &
+                title "T, P, V, a, MSD" &
+                file ${folderpath}/liquid_equilibrated_P_${DefPress}_T_${Teq}.csv screen no
+
+# Output data for post-simulation analysis
+dump            all_sim all atom 100 ${folderpath}/dump_liquid_P_${DefPress}_T_${Teq}.lammpstrj  # Saves the entire simulation
+run ${Nprod} # Run short equilibration to get the right temperature
+
+write_data ${folderpath}/liquid_equilibrated_P_${DefPress}_T_${Teq}.lmpdat

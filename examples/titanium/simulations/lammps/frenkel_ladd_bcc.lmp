@@ -1,0 +1,68 @@
+# This script runs a Frenkel-Ladd thermodynamic integration.
+# Based on the example from https://github.com/freitas-rodrigo/FreeEnergyLAMMPS
+variable Nrep equal 16 # number of unit cell repetitions in each direction
+
+units           real
+atom_style      atomic
+boundary        p p p
+
+#--------------------------- Simulation variables -----------------------------#
+  # Initalizes the random number generator.
+  variable         rnd equal round(random(0,999,${RANDOM}))
+
+  # Simulation control parameters.
+  variable         t_eq equal 1000 # Equilibration time.
+  variable         t equal 5000 # Switching time.
+#------------------------------------------------------------------------------#
+
+
+#---------------------------- Atomic setup ------------------------------------#
+
+  lattice         bcc ${a}
+  region          box block 0 ${Nrep} 0 ${Nrep} 0 ${Nrep} units lattice
+  create_box      1 box
+  create_atoms    1 box
+
+  mass            1 47.87 # Titanium
+
+  comm_modify     mode single cutoff 17.0
+  pair_style          chemtrain_deploy cuda12 0.95
+  pair_coeff          * * ../models/${model}/model.ptb 1.1 1.1
+
+  neigh_modify     delay 0
+  timestep         4.0
+#------------------------------------------------------------------------------#
+
+
+#----------------------------- Run simulation ---------------------------------#
+  # Integrator, Frenkel-Ladd modifier, and thermostat.
+  fix              f1 all nve
+  fix              f2 all ti/spring ${k} ${t} ${t_eq} function 2
+  fix              f3 all langevin ${T} ${T} 100.0 ${rnd} zero yes
+
+  # Setup thermo output.
+  thermo_style     custom step pe
+  thermo           0
+  variable         dE equal pe-f_f2
+  variable         lambda equal f_f2[1]
+
+  # Initial temperature to accelerate equilibration.
+  velocity         all create ${T} ${rnd} dist gaussian
+
+  # Forward integration.
+  dump             1 all atom 100 ${folderpath}/bcc_forward_T_${T}.lammpstrj
+  run              ${t_eq}
+  fix              f4 all print 1 "${dE} ${lambda}" title "# dE [kcal/mol] lambda" &
+                   screen no file ${folderpath}/bcc_forward_T_${T}.csv
+  run              ${t}
+  unfix            f4
+  undump           1
+
+  # Backward integration.
+  dump             1 all atom 100 ${folderpath}/bcc_backward_T_${T}.lammpstrj
+  run              ${t_eq}
+  fix              f4 all print 1 "${dE} ${lambda}" title "# dE [kcal/mol] lambda" &
+                   screen no file ${folderpath}/bcc_backward_T_${T}.dat
+  run              ${t}
+  undump           1
+#------------------------------------------------------------------------------#

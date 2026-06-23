@@ -1,0 +1,9 @@
+# Rows (1, 2, 3): Melting temperature values extracted from Wen et al. (2021) "Specialising neural network potentials for accurate properties and application to the mechanical response of titanium"
+# Rows (3, 4): Melting temperatures extracted from Stutzmann et al. (2015) DOI: 10.1103/PhysRevB.92.224110
+# Pressure (GPa), DP Melting Temp (K), Exp Melting temp (K), Errandonea (GPa), Errandonea (K), Stutzmann (GPa), Stutzmann (K)
+ 0.0e+0, 1.88621e+3, 1.94052e+3, 0.000e+0, 1.93595e+3, 0.073e+0, 1.94660e+3
+ 1.0e+0, 1.90058e+3, 1.97941e+3, 0.972e+0, 1.94835e+3, 1.010e+0, 1.98058e+3
+ 2.0e+0, 1.92896e+3, 2.01130e+3, 2.083e+0, 1.96074e+3, 1.945e+0, 2.00971e+3
+ 3.0e+0, 1.96610e+3, 2.04143e+3, 3.056e+0, 1.96818e+3, 2.880e+0, 2.03398e+3
+ 4.0e+0, 1.98046e+3, 2.07156e+3, 4.028e+0, 1.97562e+3, 4.048e+0, 2.06796e+3
+ 5.0e+0, 2.00534e+3, 2.09293e+3, 5.000e+0, 1.98540e+3, 4.983e+0, 2.09223e+3

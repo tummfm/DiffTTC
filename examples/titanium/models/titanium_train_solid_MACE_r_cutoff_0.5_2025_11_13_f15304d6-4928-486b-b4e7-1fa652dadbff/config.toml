@@ -1,0 +1,268 @@
+seed = 11
+pretrained_model = "output/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5"
+confs = [
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1154.7_P_0_a_2.958_ca_1.592.pdb",
+        1154.7,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1124.5_P_1_a_2.947_ca_1.592.pdb",
+        1124.5,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1094.4_P_2_a_2.936_ca_1.592.pdb",
+        1094.4,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1064.3_P_3_a_2.926_ca_1.592.pdb",
+        1064.3,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1034.2_P_4_a_2.916_ca_1.592.pdb",
+        1034.2,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/hcp_box_T_1005.0_P_5_a_2.907_ca_1.593.pdb",
+        1005.0,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_1940.52_P_0_a_3.315.pdb",
+        1940.52,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_1979.41_P_1_a_3.303.pdb",
+        1979.41,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2011.3_P_2_a_3.291.pdb",
+        2011.3,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2041.43_P_3_a_3.281.pdb",
+        2041.43,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2071.56_P_4_a_3.271.pdb",
+        2071.56,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2092.93_P_5_a_3.261.pdb",
+        2092.93,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_1940.52_P_0_a_3.286.pdb",
+        1154.7,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_1979.41_P_1_a_3.274.pdb",
+        1124.5,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2011.3_P_2_a_3.263.pdb",
+        1094.4,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2041.43_P_3_a_3.252.pdb",
+        1064.3,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2071.56_P_4_a_3.242.pdb",
+        1034.2,
+    ],
+    [
+        "../../juwels/output/hcp-bcc/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/bcc_T_2092.93_P_5_a_3.232.pdb",
+        1005.0,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_1940.52_P_0_a_3.335.pdb",
+        1940.52,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_1979.41_P_1_a_3.322.pdb",
+        1979.41,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_2011.3_P_2_a_3.309.pdb",
+        2011.3,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_2041.43_P_3_a_3.298.pdb",
+        2041.43,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_2071.56_P_4_a_3.286.pdb",
+        2071.56,
+    ],
+    [
+        "../../juwels/output/bcc-liquid/titanium__MACE_r_cutoff_0.5_2025_5_4_21abc4af-aea1-4549-a9a5-981f6324c2e5/boxes/liquid_T_2092.93_P_5_a_3.275.pdb",
+        2092.93,
+    ],
+]
+simulator_type = "nose_hoover"
+allowed_reduction = 0.95
+reweighting_ratio = 0.9
+
+[simulator_settings]
+kT = 16.1467797794
+
+[simulator_settings.thermostat_kwargs]
+chain_steps = 1
+tau = 2.0
+chain_length = 3
+
+[targets]
+pressure = [
+    0.0,
+    602.2137376997845,
+    1204.427475399569,
+    1806.6412130993533,
+    2408.854950799138,
+    3011.0686884989223,
+    0.0,
+    602.2137376997845,
+    1204.427475399569,
+    1806.6412130993533,
+    2408.854950799138,
+    3011.0686884989223,
+]
+free_energy_diff = [
+    -203.52644928,
+    -193.33006848000002,
+    -182.44715327999998,
+    -162.51544511999998,
+    -137.10198528,
+    -102.10748543999999,
+    -625.2014361600001,
+    -653.90575104,
+    -632.3629536,
+    -660.11214528,
+    -665.9446809599999,
+    -656.02660608,
+]
+
+[timings]
+dt = 0.004
+print_every = 0.5
+t_equilib = 20.0
+total_time = 120.0
+
+[optimizer]
+init_lr = 5e-05
+lr_decay = 0.1
+epochs = 250
+weight_decay = 0.01
+batch = 6
+
+[optimizer.optimizer_kwargs]
+b1 = 0.9
+b2 = 0.99
+eps = 1e-08
+eps_root = 1e-16
+nesterov = false
+
+[minimize]
+tol = 0.001
+max_iter = 25
+max_linesearch = 15
+max_learning_rate = 0.01
+max_displacement = 0.0025
+
+[gammas]
+pressure = [
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+]
+free_energy = [
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+    1e-05,
+]
+
+[pretrained_settings]
+seed = 11
+
+[pretrained_settings.model]
+edge_multiplier = 1.1
+r_cutoff = 0.5
+type = "MACE"
+prior_type = "lennard_jones"
+
+[pretrained_settings.model.model_kwargs]
+hidden_irreps = "64x0e + 32x1o"
+max_ell = 3
+num_interactions = 2
+correlation = 3
+n_radial_basis = 8
+envelope_p = 6
+
+[pretrained_settings.model.prior_kwargs]
+train = false
+epsilon = [
+    0.5,
+]
+sigma = [
+    0.250750799685271,
+]
+
+[pretrained_settings.optimizer]
+init_lr = 0.003
+lr_decay = 0.001
+epochs = 400
+batch = 16
+cache = 8
+weight_decay = 0.01
+
+[pretrained_settings.optimizer.optimizer_kwargs]
+b1 = 0.95
+b2 = 0.995
+eps = 1e-08
+eps_root = 1e-16
+nesterov = false
+
+[pretrained_settings.gammas]
+virial = 4e-06
+U = 1e-05
+F = 0.01

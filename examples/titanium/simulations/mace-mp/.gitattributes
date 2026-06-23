@@ -1,0 +1,2 @@
+mace-mp-0b3-medium.model filter=lfs diff=lfs merge=lfs
+mace-mp-0b3-medium.model-lammps.pt filter=lfs diff=lfs merge=lfs

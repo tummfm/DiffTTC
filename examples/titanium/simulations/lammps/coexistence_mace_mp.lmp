@@ -1,0 +1,166 @@
+# LAMMPS input script for coexistence method
+#-------------  Initialize -------------#
+clear
+timer loop
+units metal                     # Angstroms, picoseconds, eV, Kelvin, bars
+dimension 3
+boundary p p p
+atom_style atomic
+atom_modify   map yes
+newton on
+
+# Temperature and Pressure
+variable tempMelt equal "v_EstTemp + v_delta"  # melting temperature estimate
+variable pressGPa equal ${DefPress}        # pressure in bar
+variable superheat equal 700
+variable undercool equal 300
+
+variable tempLiquid equal "v_tempMelt + v_superheat"      # liquid temperature
+variable tempSolid equal "v_tempMelt - v_undercool"           # solid temperature
+variable press equal $(v_pressGPa * 10000) # pressure from GPa to bar
+
+variable tempDamp equal 100      # temperature relaxed every 10 time steps
+variable pressureDamp equal 250 # pressure relaxed every 100 time steps
+
+# Time steps
+variable timeStep equal 0.004               # 4 fs timestep
+variable TimeRelax equal 500             # Relax for 10 ps
+variable TimeCoexistence equal 40000      # Coexistence time 160 ps
+
+# Box dimensions
+variable xBoxSize equal 35
+variable yBoxSize equal 10
+variable zBoxSize equal 10
+
+timestep ${timeStep}
+
+#------------- Setup Regions ---------------------------------------------#
+
+# Define the initial lattice and geometry
+lattice bcc 3.25 origin 0.0 0.0 0.0 orient x 1 0 0 orient y 0 1 0 orient z 0 0 1
+region box block 0 ${xBoxSize} 0 ${yBoxSize} 0 ${zBoxSize}
+create_box 1 box # create a box for 2 atom types (Al, Ti)
+create_atoms 1 box
+
+# Shift atoms
+
+region liquid block $(0.3*lx) $(0.7*lx) 0 $(ly) 0 $(lz) units box
+region solid intersect 2 box liquid side out
+
+# Define groups for liquid and solid part of simulation box
+group testsolid region solid
+group testliquid region liquid
+
+group solid dynamic all region solid every 10
+group liquid dynamic all region liquid every 10
+
+#---------- Setup Potential and Masses ----------------------------#
+
+mass            1 47.94794068 # Ti
+
+# pair_style      meam/kk
+# pair_coeff      * * library.meam Ti Ti.meam Ti
+
+pair_style mace no_domain_decomposition
+pair_coeff * * mace-mp/${model} Ti
+
+neighbor    2.0 bin
+neigh_modify delay 0 every 1 check yes
+
+comm_modify     mode single cutoff 14.0
+
+#------------- Relax System  -------------#
+
+# Assign atoms to the dynamic groups
+minimize    1.0e-8 1.0e-10 1000 10000
+
+thermo 10
+thermo_style custom step temp vol press
+
+velocity    solid create ${tempSolid} 238232 mom yes dist gaussian
+velocity    liquid create ${tempLiquid} 238232 mom yes dist gaussian
+dump        d1 all atom 100 ${folderpath}/dump.relax
+
+# Integrations. Barostat enables system to expand when melting
+fix         f3 all nph pchain 3 &
+            x ${press} ${press} $(v_pressureDamp*dt) &
+            y ${press} ${press} $(v_pressureDamp*dt) &
+            z ${press} ${press} $(v_pressureDamp*dt) &
+            couple yz
+
+# Superheat liquid region to achieve melting and supercool solid region to
+# prevent melting. Adjust to smaller time units.
+fix         f1 liquid langevin ${tempLiquid} ${tempLiquid} $(v_tempDamp/1000) 4234 zero yes
+fix         f2 solid  langevin ${tempSolid} ${tempSolid} $(v_tempDamp/1000) 54256 zero yes
+
+# Compute thermo properties to log
+compute     temp_liquid liquid temp
+compute     temp_solid solid temp
+compute     temp_all all temp
+compute     press_all all pressure temp_all
+
+# Compute crystal structure fractions
+compute     cst all ptm/atom default 0.18 all
+
+variable    f_fcc atom "c_cst[1] == 1"
+variable    f_hcp atom "c_cst[1] == 2"
+variable    f_bcc atom "c_cst[1] == 3"
+variable    f_ico atom "c_cst[1] == 4"
+variable    f_amp atom "c_cst[1] == 0"
+
+compute     f_fcc all reduce ave v_f_fcc
+compute     f_hcp all reduce ave v_f_hcp
+compute     f_bcc all reduce ave v_f_bcc
+compute     f_ico all reduce ave v_f_ico
+compute     f_amp all reduce ave v_f_amp
+
+variable    tstep equal "step * dt"
+
+fix         fd1 all ave/time 1  1 25 v_tstep c_temp_liquid c_temp_solid c_press_all file ${folderpath}/relax.txt
+fix         fd2 all ave/time 1  1 25 v_tstep c_f_fcc c_f_hcp c_f_bcc c_f_ico c_f_amp file ${folderpath}/relax_cst.txt
+
+run         $(2*v_TimeRelax)
+
+# Relax both regions independently to the melting temperature estimate
+fix         f1 liquid langevin ${tempLiquid} ${tempMelt} $(v_tempDamp/1000) 4234 zero yes
+fix         f2 solid  langevin ${tempSolid} ${tempMelt} $(v_tempDamp/1000) 54256 zero yes
+
+run         $(v_TimeRelax)
+
+unfix       f1
+unfix       f2
+unfix       f3
+
+# Ensure a constant temperature throughout the simulation box
+fix         f1 all npt pchain 2 tchain 3 &
+            temp ${tempMelt} ${tempMelt} $(v_tempDamp*dt) &
+            x ${press} ${press} $(v_pressureDamp*dt) &
+            y ${press} ${press} $(v_pressureDamp*dt) &
+            z ${press} ${press} $(v_pressureDamp*dt) &
+            couple yz
+
+run         $(v_TimeRelax)
+
+unfix       f1
+
+unfix       fd1
+unfix       fd2
+undump      d1
+
+write_data  ${folderpath}/prepared_coexistence.lmpdat
+
+#------------- Run Coexistence in NPH ensemble  -------------#
+
+reset_timestep 0
+
+fix         f1 all nph pchain 2 &
+            x ${press} ${press} $(v_pressureDamp*dt) &
+            y ${press} ${press} $(v_pressureDamp*dt) &
+            z ${press} ${press} $(v_pressureDamp*dt) &
+            couple yz
+
+fix         fd1 all ave/time 1  1 25 v_tstep c_temp_all c_temp_liquid c_temp_solid c_press_all file ${folderpath}/coexistence.txt
+fix         fd2 all ave/time 1  1 25 v_tstep c_f_fcc c_f_hcp c_f_bcc c_f_ico c_f_amp file ${folderpath}/coexistence_cst.txt
+dump        d1 all atom 100 ${folderpath}/dump.coex
+
+run         $(v_TimeCoexistence)

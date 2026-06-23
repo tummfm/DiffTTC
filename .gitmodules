@@ -1,0 +1,4 @@
+[submodule "external/lammps"]
+	path = external/lammps
+	url = git@github.com:lammps/lammps.git
+	branch = stable

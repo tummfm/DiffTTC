@@ -1,0 +1,110 @@
+# This script runs a reversible scaling thermodynamic integration.
+
+variable Patm equal 9869*${P}
+
+units           real
+atom_style      atomic
+boundary        p p p
+
+#--------------------------- Simulation variables -----------------------------#
+  # Initalizes the random number generator.
+  variable         rnd equal round(random(0,999,${RANDOM}))
+
+  # Simulation control parameters.
+  variable         t_eq equal 1750 # Equilibration time (5 ps).
+  variable         t equal 5000 # Production time (20 ps).
+#------------------------------------------------------------------------------#
+
+
+#---------------------------- Atomic setup ------------------------------------#
+  read_data       ${prepared}
+
+  mass            1 47.87 # Titanium
+
+  comm_modify     mode single cutoff 17.0
+  pair_style          chemtrain_deploy cuda12 0.9
+  pair_coeff          * * ../models/${model}/model.ptb 1.1 1.25
+
+  neighbor         2.0 bin
+  neigh_modify     every 10 delay 0 check yes
+  timestep         4.0
+
+#------------------------------------------------------------------------------#
+
+
+#----------------------------- Run simulation ---------------------------------#
+  # Setup thermo output.
+  thermo_style     custom step pe
+  thermo           0
+
+  compute          msd all msd com yes
+  compute          cst all ptm/atom default 0.18 all
+
+  variable         f_fcc atom "c_cst[1] == 1"
+  variable         f_hcp atom "c_cst[1] == 2"
+  variable         f_bcc atom "c_cst[1] == 3"
+  variable         f_ico atom "c_cst[1] == 4"
+  variable         f_amp atom "c_cst[1] == 0"
+
+  compute          f_fcc all reduce ave v_f_fcc
+  compute          f_hcp all reduce ave v_f_hcp
+  compute          f_bcc all reduce ave v_f_bcc
+  compute          f_ico all reduce ave v_f_ico
+  compute          f_amp all reduce ave v_f_amp
+
+  label loop_sf
+  variable idx loop ${steps}
+
+    variable Teq equal "v_Tstart + (v_idx - 1 ) * (v_Tend - v_Tstart) / (v_steps - 1)"
+    print "Running simulation ${idx} at temperature: ${Teq} K in ${Tstart} to ${Tend} K range."
+
+    # Skip first runs. Load from last dump if needed.
+    if "${idx} == ${skip}" then &
+        "jump SELF load_traj"
+    if "${idx} < ${skip}" then &
+        "print 'Skipping simulation ${idx} at temperature: ${Teq} K in ${Tstart} to ${Tend} K range.'" &
+        "next idx" &
+        "jump SELF loop_sf"
+
+    # Integrator, barostat, and thermostat.
+    fix              f1 all nph &
+                     x ${Patm} ${Patm} $(250.*dt) &
+                     y ${Patm} ${Patm} $(250.*dt) &
+                     z ${Patm} ${Patm} $(250.*dt) &
+                     couple ${couple} pchain 2
+    fix              f2 all langevin ${Teq} ${Teq} $(25.0*dt) ${rnd} zero yes
+
+    # Initial temperature to accelerate equilibration.
+    velocity         all create ${Teq} ${rnd} dist gaussian
+    velocity         all zero linear
+    thermo           10
+    thermo_style     custom step temp press vol pe etotal
+
+    run ${t_eq}
+
+    fix              f4 all print 10 "$(temp) $(press) $(vol) $(lx) $(lz) $(c_f_fcc) $(c_f_hcp) $(c_f_bcc) $(c_f_ico) $(c_f_amp) $(c_msd[4])" screen no &
+                     file ${folderpath}/thermo_T_${Teq}.csv title "# T P V Lx Lz f_fcc f_hcp f_bcc f_ico f_amp MSD"
+
+    dump             d1 all atom 100 ${folderpath}/dump_T_${Teq}.lammpstrj  # Saves the entire simulation
+
+    run ${t}
+
+    unfix            f1
+    unfix            f4
+    undump           d1
+
+    next idx
+    jump SELF loop_sf
+
+    label load_traj
+
+    # Compute from the previous runs
+    variable last_frame equal $((v_t_eq + v_t) * v_idx)
+    variable last_frame equal $((v_last_frame - (v_last_frame % 100)))
+
+    read_dump        ${folderpath}/dump_T_${Teq}.lammpstrj ${last_frame} x y z &
+
+    next idx
+    jump SELF loop_sf
+
+#------------------------------------------------------------------------------#

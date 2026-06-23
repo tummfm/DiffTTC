@@ -1,0 +1,111 @@
+# This script runs a reversible scaling thermodynamic integration.
+
+variable Patm equal 9869*${P}
+
+units           real
+atom_style      atomic
+boundary        p p p
+
+#--------------------------- Simulation variables -----------------------------#
+  # Initalizes the random number generator.
+  variable         rnd equal round(random(0,999,${RANDOM}))
+
+  # Simulation control parameters (for thermal expansion).
+  variable         t_eq equal 1750 # Equilibration time (5 ps).
+  variable         t equal 5000 # Production time (20 ps).
+
+  variable         t_eq_vacf equal 250 # Equilibration time for VACF.
+  variable         t_vacf equal 1000 # Production time for VACF.
+
+  variable         timeStep equal 4.0
+  variable         tempDamp equal $(25.0*v_timeStep)
+  variable         pressDamp equal $(250.0*v_timeStep)
+
+#------------------------------------------------------------------------------#
+
+
+#---------------------------- Atomic setup ------------------------------------#
+  read_data       ${prepared}
+
+  mass            1 47.87 # Titanium
+
+  comm_modify     mode single cutoff 17.0
+  pair_style          chemtrain_deploy cuda12 0.9
+  pair_coeff          * * ../models/${model}/model.ptb 1.1 1.1
+
+  neighbor         2.0 bin
+  neigh_modify     every 10 delay 0 check yes
+  timestep         4.0
+
+
+#--------------------$----------------------------------------------------------#
+
+
+#----------------------------- Run simulation ---------------------------------#
+  # Setup thermo output.
+  thermo_style     custom step pe
+  thermo           0
+
+  compute          msd all msd com yes
+  compute          cst all ptm/atom default 0.18 all
+
+  variable         f_fcc atom "c_cst[1] == 1"
+  variable         f_hcp atom "c_cst[1] == 2"
+  variable         f_bcc atom "c_cst[1] == 3"
+  variable         f_ico atom "c_cst[1] == 4"
+  variable         f_amp atom "c_cst[1] == 0"
+
+  compute          f_fcc all reduce ave v_f_fcc
+  compute          f_hcp all reduce ave v_f_hcp
+  compute          f_bcc all reduce ave v_f_bcc
+  compute          f_ico all reduce ave v_f_ico
+  compute          f_amp all reduce ave v_f_amp
+
+  label loop_sf
+  variable idx loop ${steps}
+    timestep       ${timeStep}
+
+    variable Teq equal "v_Tstart + (v_idx - 1) * (v_Tend - v_Tstart) / (v_steps - 1)"
+    print "Running simulation ${idx} at temperature: ${Teq} K in ${Tstart} to ${Tend} K range."
+
+    # Compute from the previous runs
+    variable last_frame equal $((v_t_eq + v_t) * v_idx)
+    variable last_frame equal $((v_last_frame - (v_last_frame % 100)))
+
+    read_dump        ${folderpath}/dump_T_${Teq}.lammpstrj ${last_frame} x y z &
+
+    velocity         all create ${Teq} ${rnd} dist gaussian
+    velocity         all zero linear
+
+    # Integrator, barostat, and thermostat.
+    fix              f1 all npt &
+                     temp ${Teq} ${Teq} ${tempDamp} &
+                     x ${Patm} ${Patm} ${pressDamp} &
+                     y ${Patm} ${Patm} ${pressDamp} &
+                     z ${Patm} ${Patm} ${pressDamp} &
+                     couple ${couple} pchain 2
+
+    # Initial temperature to accelerate equilibration.
+    velocity         all create ${Teq} ${rnd} dist gaussian
+    velocity         all zero linear
+    thermo           10
+    thermo_style     custom step temp press vol pe etotal
+
+    run ${t_eq_vacf}
+
+    timestep         $(v_timeStep/8) # Smaller to capture VACF accurately
+
+    compute          vacf all vacf
+    fix              f4 all print 1 "$(c_vacf[4])" screen no &
+                     file ${folderpath}/vacf_T_${Teq}.csv title "# VACF"
+
+    run ${t_vacf}
+
+    unfix            f1
+    unfix            f4
+    uncompute        vacf
+
+    next idx
+    jump SELF loop_sf
+
+#------------------------------------------------------------------------------#

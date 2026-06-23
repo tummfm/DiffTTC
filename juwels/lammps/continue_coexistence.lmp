@@ -1,0 +1,99 @@
+# LAMMPS input script for coexistence method
+#-------------  Initialize -------------#
+clear
+timer loop
+units real                     # Angstroms, picoseconds, eV, Kelvin, bars
+dimension 3
+boundary p p p
+atom_style atomic
+
+# Temperature and Pressure
+variable tempMelt equal "v_EstTemp + v_delta"  # melting temperature estimate
+variable pressBar equal ${DefPress}        # pressure in bar
+variable press equal $(v_pressBar * 9869) # pressure from bar to atmospheres
+
+variable pressureDamp equal 250 # pressure relaxed every 100 time steps
+
+# Time steps
+variable timeStep equal 4.0               # 4 fs timestep
+variable TimeCoexistence equal 40000      # Coexistence time 160 ps
+
+timestep ${timeStep}
+
+#------------- Setup Regions ---------------------------------------------#
+
+read_data   ${folderpath}/prepared_coexistence.lmpdat
+
+region      box block 0 $(lx) 0 $(ly) 0 $(lz)
+region      liquid block $(0.3*lx) $(0.7*lx) 0 $(ly) 0 $(lz) units box
+region      solid intersect 2 box liquid side out
+
+# Define groups for liquid and solid part of simulation box
+group       testsolid region solid
+group       testliquid region liquid
+
+group       solid dynamic all region solid every 10
+group       liquid dynamic all region liquid every 10
+
+#---------- Setup Potential and Masses ----------------------------#
+
+mass        1 47.94794068 # Ti
+
+# Define potential
+pair_style  chemtrain_deploy cuda12 0.95
+pair_coeff  * * ../models/${model}/model.ptb 1.1 1.25
+
+neighbor    2.0 bin
+
+# Has to be r_cut * 2 * #MPL + skin_dist
+comm_modify mode single cutoff 12.0
+
+#------------- Setup Computes  -------------#
+
+# Assign atoms to the dynamic groups
+run         1
+
+thermo 10
+thermo_style custom step temp vol press
+
+# Compute thermo properties to log
+compute     temp_liquid liquid temp
+compute     temp_solid solid temp
+compute     temp_all all temp
+compute     press_all all pressure temp_all
+
+# Compute crystal structure fractions
+compute     cst all ptm/atom default 0.18 all
+
+variable    f_fcc atom "c_cst[1] == 1"
+variable    f_hcp atom "c_cst[1] == 2"
+variable    f_bcc atom "c_cst[1] == 3"
+variable    f_ico atom "c_cst[1] == 4"
+variable    f_amp atom "c_cst[1] == 0"
+
+compute     f_fcc all reduce ave v_f_fcc
+compute     f_hcp all reduce ave v_f_hcp
+compute     f_bcc all reduce ave v_f_bcc
+compute     f_ico all reduce ave v_f_ico
+compute     f_amp all reduce ave v_f_amp
+
+variable    tstep equal "step * dt"
+
+#------------- Run Coexistence in NPH ensemble  -------------#
+
+# Load previous coexistence run to continue
+read_dump   ${folderpath}/dump.coex $(v_run * v_TimeCoexistence) &
+            x y z timestep yes replace yes box yes
+
+fix         f1 all nph pchain 2 &
+            x ${press} ${press} $(v_pressureDamp*dt) &
+            y ${press} ${press} $(v_pressureDamp*dt) &
+            z ${press} ${press} $(v_pressureDamp*dt) &
+            couple yz
+
+fix         fd1 all ave/time 1  1 25 v_tstep c_temp_all c_temp_liquid c_temp_solid c_press_all append ${folderpath}/coexistence.txt
+fix         fd2 all ave/time 1  1 25 v_tstep c_f_fcc c_f_hcp c_f_bcc c_f_ico c_f_amp append ${folderpath}/coexistence_cst.txt
+dump        d1 all atom 100 ${folderpath}/dump.coex
+dump_modify d1 append yes # Continueq run
+
+run         $(v_TimeCoexistence)

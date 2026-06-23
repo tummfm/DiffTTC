@@ -1,0 +1,31 @@
+variable       dt equal 4.0             # Timestep in fs
+variable       Neq equal 1000            # Number of equilibration steps
+
+units real                     # Angstroms, picoseconds, eV, Kelvin, bars
+dimension 3
+boundary p p p
+atom_style atomic
+
+lattice bcc ${a}
+region box block 0 6 0 6 0 8
+create_box 1 box
+create_atoms 1 box
+
+mass            1 47.94794068 # Ti
+
+comm_modify     mode single cutoff 17.0
+pair_style          chemtrain_deploy cuda12 0.95
+pair_coeff          * * ../models/${model}/model.ptb 1.1 1.1
+
+thermo              100
+thermo_style        custom step temp pe etotal press vol
+thermo_modify       flush yes
+
+timestep            ${dt}
+
+fix             relax all nvt temp $(v_T + 1000.) ${T} $(50.*dt) tchain 3
+run             ${Neq}
+
+# Run a superheating simulation to melt
+
+write_data ${folderpath}/liquid_T_${T}_P_${P}_a_${a}.lmpdat

@@ -1,0 +1,44 @@
+seed = 11
+
+[model]
+edge_multiplier = 1.1
+r_cutoff = 0.5
+type = "MACE"
+prior_type = "lennard_jones"
+
+[model.model_kwargs]
+hidden_irreps = "64x0e + 32x1o"
+max_ell = 3
+num_interactions = 2
+correlation = 3
+n_radial_basis = 8
+envelope_p = 6
+
+[model.prior_kwargs]
+train = false
+epsilon = [
+    0.5,
+]
+sigma = [
+    0.250750799685271,
+]
+
+[optimizer]
+init_lr = 0.003
+lr_decay = 0.001
+epochs = 400
+batch = 16
+cache = 8
+weight_decay = 0.01
+
+[optimizer.optimizer_kwargs]
+b1 = 0.95
+b2 = 0.995
+eps = 1e-08
+eps_root = 1e-16
+nesterov = false
+
+[gammas]
+virial = 4e-06
+U = 1e-05
+F = 0.01
